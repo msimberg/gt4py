@@ -132,17 +132,14 @@ def _collect_offset_definitions(
     grid_type: common.GridType,
     offset_provider_type: common.OffsetProviderType,
 ) -> dict[str, TagDefinition]:
-    used_offset_tags: set[str] = (
+    used_offset_tags: set[itir.OffsetLiteral] = (
         node.walk_values()
         .if_isinstance(itir.OffsetLiteral)
         .filter(lambda offset_literal: isinstance(offset_literal.value, str))
         .getattr("value")
     ).to_set()
-    # implicit offsets don't occur in the `offset_provider_type`, get them from the used offset tags
-    offset_provider_type = {
-        offset_name: common.get_offset_type(offset_provider_type, offset_name)
-        for offset_name in used_offset_tags
-    } | {**offset_provider_type}
+    if not used_offset_tags.issubset(set(offset_provider_type.keys())):
+        raise AssertionError("ITIR contains an offset tag without a corresponding offset provider.")
     offset_definitions = {}
 
     for offset_name, dim_or_connectivity_type in offset_provider_type.items():
@@ -156,6 +153,17 @@ def _collect_offset_definitions(
                 )
             else:
                 assert grid_type == common.GridType.UNSTRUCTURED
+                # TODO(tehrengruber): The implicit offset providers added to support syntax like
+                #  `KDim+1` can also include horizontal dimensions. Cartesian shifts in this
+                #  dimension are not supported by the backend and also never occur in user code.
+                #  We just skip these here for now, but this is not a clean solution. Not having
+                #  any unstructured dimensions in here would be preferred.
+                if (
+                    dim.kind == common.DimensionKind.HORIZONTAL
+                    and offset_name == common.dimension_to_implicit_offset(dim.value)
+                ):
+                    continue
+
                 if not dim.kind == common.DimensionKind.VERTICAL:
                     raise ValueError(
                         "Mapping an offset to a horizontal dimension in unstructured is not allowed."
@@ -456,8 +464,7 @@ class GTFN_lowering(eve.NodeTranslator, eve.VisitorWithSymbolTableTrait):
             shift_offsets = self._collect_offset_or_axis_node(itir.OffsetLiteral, kwargs["stencil"])
             for o in shift_offsets:
                 if o in self.offset_provider_type and isinstance(
-                    common.get_offset_type(self.offset_provider_type, o),
-                    common.NeighborConnectivityType,
+                    self.offset_provider_type[o], common.NeighborConnectivityType
                 ):
                     connectivities.append(SymRef(id=o))
         return UnstructuredDomain(

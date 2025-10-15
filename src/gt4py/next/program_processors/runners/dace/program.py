@@ -40,7 +40,10 @@ class Program(decorator.Program, dace.frontend.python.common.SDFGConvertible):
         if (self.backend is None) or "dace" not in self.backend.name.lower():
             raise ValueError("The SDFG can be generated only for the DaCe backend.")
 
-        offset_provider: common.OffsetProvider = self.connectivities or {}
+        offset_provider: common.OffsetProvider = {
+            **(self.connectivities or {}),
+            **self._implicit_offset_provider,
+        }
         column_axis = kwargs.get("column_axis", None)
 
         # TODO(ricoh): connectivity tables required here for now.
