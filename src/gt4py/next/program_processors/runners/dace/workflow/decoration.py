@@ -44,6 +44,7 @@ def convert_args(
             args = (*args, out)
 
         try:
+            raise TypeError
             # Not the first call.
             #  We will only update the argument vector  for the normal call.
             # NOTE: If this is the first time then we will generate an exception because
@@ -54,7 +55,9 @@ def convert_args(
 
         except TypeError:
             # First call. Construct the initial argument vector of the `CompiledDaceProgram`.
-            assert fun.csdfg_argv is None and fun.csdfg_init_argv is None
+            # assert fun.csdfg_argv is None and fun.csdfg_init_argv is None
+            fun.csdfg_argv = None
+            fun.csdfg_init_argv = None
             flat_args: Sequence[Any] = gtx_utils.flatten_nested_tuple(args)
             this_call_args = sdfg_callable.get_sdfg_args(
                 fun.sdfg_program.sdfg,
