@@ -377,6 +377,7 @@ class CompiledProgramsPool(Generic[ffront_stages.DSLDefinitionT]):
         (defined by 'static_params') in case `enable_jit` is True. Otherwise,
         it is an error.
         """
+        cuda_stream = kwargs.pop("cuda_stream", None)
         canonical_args, canonical_kwargs = self._args_canonicalizer(*args, **kwargs)
         if (extractor := self._primitive_values_extractor) is not None:
             args, kwargs = extractor(*canonical_args, **canonical_kwargs)
@@ -435,6 +436,7 @@ class CompiledProgramsPool(Generic[ffront_stages.DSLDefinitionT]):
                     *canonical_args,
                     offset_provider=offset_provider,
                     enable_jit=False,
+                    cuda_stream=cuda_stream,
                     **canonical_kwargs,
                 )  # passing `enable_jit=False` because a cache miss should be a hard-error in this call`
 
@@ -442,7 +444,7 @@ class CompiledProgramsPool(Generic[ffront_stages.DSLDefinitionT]):
                 raise RuntimeError("No program compiled for this set of static arguments.") from e
 
         with compiled_program_call_context(self, key, args, kwargs, offset_provider):
-            compiled_program(*args, **kwargs, offset_provider=offset_provider)
+            compiled_program(*args, **kwargs, offset_provider=offset_provider, cuda_stream=cuda_stream)
 
     @functools.cached_property
     def _primitive_values_extractor(self) -> Callable | None:

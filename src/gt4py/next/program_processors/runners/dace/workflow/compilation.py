@@ -99,6 +99,23 @@ class CompiledDaceProgram:
             self.csdfg_argv, self.csdfg_init_argv, do_gpu_check=config.DEBUG
         )
 
+    def set_cuda_stream(self, stream_ptr: int) -> None:
+        """Set the CUDA stream for all GPU work in this compiled SDFG.
+
+        Overrides the internal stream used for kernel launches and memcpy
+        operations. Pass 0 (or cudaStreamDefault) to restore default behavior.
+        Requires the DaCe patch that routes work through streams[0].
+        """
+        import ctypes
+
+        set_fn = self.sdfg_program.get_exported_function(
+            "__dace_gpu_set_all_streams"
+        )
+        if set_fn is not None:
+            set_fn(
+                self.sdfg_program._libhandle, ctypes.c_void_p(stream_ptr)
+            )
+
     def __call__(self, **kwargs: Any) -> None:
         """Call the compiled SDFG with the given arguments.
 

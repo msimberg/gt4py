@@ -383,11 +383,12 @@ class Program(_CompilableGTEntryPointMixin[ffront_stages.DSLProgramDef]):
             kwargs=kwargs,
         ):
             if __debug__:
+                validate_kwargs = {k: v for k, v in kwargs.items() if k != "cuda_stream"}
                 # TODO: remove or make dependency on self.past_stage optional
                 past_process_args._validate_args(
                     self.past_stage.past_node,
                     arg_types=[type_translation.from_value(arg) for arg in args],
-                    kwarg_types={k: type_translation.from_value(v) for k, v in kwargs.items()},
+                    kwarg_types={k: type_translation.from_value(v) for k, v in validate_kwargs.items()},
                 )
 
             if self.backend is not None:

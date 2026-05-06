@@ -40,6 +40,7 @@ def convert_args(
         *args: Any,
         offset_provider: gtx_common.OffsetProvider,
         out: Any = None,
+        cuda_stream: int | None = None,
     ) -> Any:
         if out is not None:
             args = (*args, out)
@@ -70,6 +71,8 @@ def convert_args(
             fun.construct_arguments(**this_call_args)
 
         # Perform the call to the SDFG.
+        if cuda_stream is not None:
+            fun.set_cuda_stream(cuda_stream)
         fun.fast_call()
 
         if collect_time:
